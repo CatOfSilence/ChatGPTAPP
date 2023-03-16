@@ -12,7 +12,7 @@ class OkhttpUtil {
     var newContent = ""
     var url = "http://chatapi.qload.cn/api/v2/answer"
     var apiKey = ""
-//    var apiKey = "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"
+//    var apiKey = "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"
 
     fun doPost(newCallback: Callback) {
         val httpLoggingInterceptor =

@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.chatgptapp.adapter.ChatIndexAdapter
+import com.example.chatgptapp.sql.MyDatabaseHelper
 import com.example.chatgptapp.utils.SqlOprate
 import com.lwh.comm.utils.OkhttpUtil
 import kotlinx.android.synthetic.main.activity_main.*
@@ -18,33 +19,25 @@ import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
     var msg: Message? = null
+    var sqlOprate: SqlOprate? = null
+    var list: MutableList<Msg> = mutableListOf()
+
+    var handler: Handler? = null
+    var chatIndexAdapter: ChatIndexAdapter? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        var list = mutableListOf<Msg>()
 
-        val layoutManager = LinearLayoutManager(this)
-        recyclerView.layoutManager = layoutManager
-        var chatIndexAdapter = ChatIndexAdapter(list)
-        recyclerView.adapter = chatIndexAdapter
-        recyclerView.scrollToPosition(list.size - 1)
-
-//        var db = SqlOprate(this)
-//        db.insert()
-//        db.query()
-
-        val handler = Handler(Handler.Callback {
-            chatIndexAdapter.notifyDataSetChanged()
-            recyclerView.scrollToPosition(list.size - 1)
-            false
-        })
+        init()
 
         bt_send.setOnClickListener {
             if (ed_content.text.isNotEmpty()) {
                 val content = ed_content.text.toString()
                 val okhttpUtil = OkhttpUtil()
                 var flag = true
-                list.add(Msg(content, Msg.TYPE_SENT))
+                dataInsert(Msg(content, Msg.TYPE_SENT))
+
 
                 var reply: String? = ""
                 for (s in list.reversed()) {
@@ -64,13 +57,13 @@ class MainActivity : AppCompatActivity() {
                 okhttpUtil.received = reply.toString()
                 ed_content.setText("")
 
-                chatIndexAdapter.notifyDataSetChanged()
-                recyclerView.scrollToPosition(list.size - 1)
-
+                chatIndexAdapter!!.notifyDataSetChanged()
+                recyclerView.smoothScrollToPosition(chatIndexAdapter!!.itemCount - 1)
 
                 list.add(Msg("正在加载，请等待......", Msg.TYPE_RECEIVED))
-                chatIndexAdapter.notifyDataSetChanged()
-                recyclerView.scrollToPosition(list.size - 1)
+
+                chatIndexAdapter!!.notifyDataSetChanged()
+                recyclerView.smoothScrollToPosition(chatIndexAdapter!!.itemCount - 1)
 
                 okhttpUtil.doPost(object : Callback {
 
@@ -87,15 +80,52 @@ class MainActivity : AppCompatActivity() {
                             ?.replace(Regex("^(\\{AI\\}\n)+"), "")
                             ?.replace("{AI}", "")
                             ?.replace("{/AI}", "")
-                        list.set(list.size - 1, Msg(str, Msg.TYPE_RECEIVED))
+                        list.removeAt(list.size - 1)
+                        dataInsert(Msg(str, Msg.TYPE_RECEIVED))
                         Log.i("ResponeContent", str.toString())
 
                         msg = Message()
                         msg!!.obj = str
-                        handler.sendMessage(msg!!)
+                        handler!!.sendMessage(msg!!)
                     }
                 })
             }
         }
+    }
+
+    private fun init() {
+        sqlOprate = SqlOprate(this)
+        dataQuery()
+
+        val layoutManager = LinearLayoutManager(this)
+        recyclerView.layoutManager = layoutManager
+        chatIndexAdapter = ChatIndexAdapter(list)
+        recyclerView.adapter = chatIndexAdapter
+        recyclerView.smoothScrollToPosition(chatIndexAdapter!!.itemCount - 1)
+
+        this.handler = Handler(Handler.Callback {
+            chatIndexAdapter!!.notifyDataSetChanged()
+            recyclerView.smoothScrollToPosition(chatIndexAdapter!!.itemCount - 1)
+            false
+        })
+
+    }
+
+    private fun dataInsert(msg: Msg) {
+        list.add(msg)
+        sqlOprate!!.insert(msg.type, msg.content.toString())
+    }
+
+    private fun dataQuery() {
+        var cursor = sqlOprate!!.query()
+        if (cursor!!.moveToFirst()) {
+            do {
+                val id = cursor.getInt(cursor.getColumnIndex("id"))
+                val type = cursor.getInt(cursor.getColumnIndex("type"))
+                val content = cursor.getString(cursor.getColumnIndex("content"))
+                list.add(Msg(content, type))
+            } while (cursor.moveToNext())
+        }
+        cursor.close()
     }
 }
