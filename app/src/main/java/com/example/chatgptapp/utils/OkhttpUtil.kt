@@ -11,8 +11,10 @@ class OkhttpUtil {
     var received = ""
     var newContent = ""
     var url = "http://chatapi.qload.cn/api/v2/answer"
-    var apiKey = ""
-//    var apiKey = "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"
+
+    companion object {
+        var apiKey = ""
+    }
 
     fun doPost(newCallback: Callback) {
         val httpLoggingInterceptor =
@@ -32,7 +34,7 @@ class OkhttpUtil {
         if (newContent.isNotEmpty()) {
             conversations.add(mapOf("role" to "user", "content" to newContent))
         }
-
+        apiKey = apiKey?.replace(":\"","")
         val requestBody =
             Gson().toJson(mapOf("conversations" to conversations, "apikey" to apiKey))
                 .toRequestBody("application/json".toMediaType())
