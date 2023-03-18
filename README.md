@@ -7,4 +7,4 @@
 
 对话功能：通过发送消息等待Ai回复，需要网络连接，对话记录会存储在手机本地
 
-![](img\聊天演示.gif)
+![](https://github.com/CatOfSilence/ChatGPTAPP/blob/master/img/%E8%81%8A%E5%A4%A9%E6%BC%94%E7%A4%BA.gif)
